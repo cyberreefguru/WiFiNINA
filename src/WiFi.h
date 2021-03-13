@@ -42,10 +42,52 @@ class WiFiClass
 private:
 
     static void init();
+
+    uint8_t retryCount;
+    uint32_t retryDelay;
+	void (*callbackConnectionStatus)();
+	void (*callbackAccessPointStatus)();
+	void (*callbackScanStatus)();
+
 public:
     WiFiClass();
 
-    /*
+    /**
+     * Sets the number of times to try during a connection attempt
+     */
+    void setRetryCount(uint8_t c);
+
+    /**
+     * Gets the number of times to try during a connection attempt
+     */
+    uint8_t getRetryCount();
+
+    /**
+     * Sets the time duration to wait until checking for a retry
+     */
+    void setRetryDelay(uint32_t c);
+
+    /**
+     * Sets the time duration to wait until checking for a retry
+     */
+    uint32_t getRetryDelay();
+
+    /**
+     * Sets the status update callback function pointer
+     */
+	void setConnectionStatusCallback(void (*cb)());
+
+    /**
+     * Sets the status update callback function pointer
+     */
+	void setAccessPointStatusCallback(void (*cb)());
+
+    /**
+     * Sets the status update callback function pointer
+     */
+	void setScanStatusCallback(void (*cb)());
+
+	/*
      * Get firmware version
      */
     static const char* firmwareVersion();

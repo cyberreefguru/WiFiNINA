@@ -32,6 +32,46 @@ extern "C" {
 
 WiFiClass::WiFiClass()
 {
+	retryCount = WL_MAX_ATTEMPT_CONNECTION;
+	retryDelay = WL_DELAY_START_CONNECTION;
+	callbackConnectionStatus = NULL;
+	callbackAccessPointStatus = NULL;
+	callbackScanStatus = NULL;
+}
+
+void WiFiClass::setRetryCount(uint8_t c)
+{
+	retryCount = c;
+}
+
+uint8_t WiFiClass::getRetryCount()
+{
+	return retryCount;
+}
+
+void WiFiClass::setRetryDelay(uint32_t c)
+{
+	retryDelay = c;
+}
+
+uint32_t WiFiClass::getRetryDelay()
+{
+	return retryDelay;
+}
+
+void WiFiClass::setConnectionStatusCallback(void (*cb)())
+{
+	this->callbackConnectionStatus = cb;
+}
+
+void WiFiClass::setAccessPointStatusCallback(void (*cb)())
+{
+	this->callbackAccessPointStatus = cb;
+}
+
+void WiFiClass::setScanStatusCallback(void (*cb)())
+{
+	this->callbackAccessPointStatus = cb;
 }
 
 void WiFiClass::setPins(int8_t cs, int8_t ready, int8_t reset, int8_t gpio0, SPIClass *spi) {
@@ -64,13 +104,17 @@ const char* WiFiClass::firmwareVersion()
 int WiFiClass::begin(const char* ssid)
 {
 	uint8_t status = WL_IDLE_STATUS;
-	uint8_t attempts = WL_MAX_ATTEMPT_CONNECTION;
+	uint8_t attempts = retryCount;
 
    if (WiFiDrv::wifiSetNetwork(ssid, strlen(ssid)) != WL_FAILURE)
    {
 	   do
 	   {
-		   delay(WL_DELAY_START_CONNECTION);
+		   if(callbackConnectionStatus)
+		   {
+			   callbackConnectionStatus();
+		   }
+		   delay(retryDelay);
 		   status = WiFiDrv::getConnectionStatus();
 	   }
 	   while (((status == WL_IDLE_STATUS)||(status == WL_NO_SSID_AVAIL)||(status == WL_SCAN_COMPLETED))&&(--attempts>0));
@@ -84,14 +128,18 @@ int WiFiClass::begin(const char* ssid)
 int WiFiClass::begin(const char* ssid, uint8_t key_idx, const char *key)
 {
 	uint8_t status = WL_IDLE_STATUS;
-	uint8_t attempts = WL_MAX_ATTEMPT_CONNECTION;
+	uint8_t attempts = retryCount;
 
 	// set encryption key
    if (WiFiDrv::wifiSetKey(ssid, strlen(ssid), key_idx, key, strlen(key)) != WL_FAILURE)
    {
 	   do
 	   {
-		   delay(WL_DELAY_START_CONNECTION);
+		   if(callbackConnectionStatus)
+		   {
+			   callbackConnectionStatus();
+		   }
+		   delay(retryDelay);
 		   status = WiFiDrv::getConnectionStatus();
 	   }while ((( status == WL_IDLE_STATUS)||(status == WL_NO_SSID_AVAIL)||(status == WL_SCAN_COMPLETED))&&(--attempts>0));
    }else{
@@ -103,14 +151,18 @@ int WiFiClass::begin(const char* ssid, uint8_t key_idx, const char *key)
 int WiFiClass::begin(const char* ssid, const char *passphrase)
 {
 	uint8_t status = WL_IDLE_STATUS;
-	uint8_t attempts = WL_MAX_ATTEMPT_CONNECTION;
+	uint8_t attempts = retryCount;
 
     // set passphrase
     if (WiFiDrv::wifiSetPassphrase(ssid, strlen(ssid), passphrase, strlen(passphrase))!= WL_FAILURE)
     {
  	   do
  	   {
- 		   delay(WL_DELAY_START_CONNECTION);
+		   if(callbackConnectionStatus)
+		   {
+			   callbackConnectionStatus();
+		   }
+ 		   delay(retryDelay);
  		   status = WiFiDrv::getConnectionStatus();
  	   }
 	   while ((( status == WL_IDLE_STATUS)||(status == WL_NO_SSID_AVAIL)||(status == WL_SCAN_COMPLETED))&&(--attempts>0));
@@ -128,13 +180,17 @@ uint8_t WiFiClass::beginAP(const char *ssid)
 uint8_t WiFiClass::beginAP(const char *ssid, uint8_t channel)
 {
 	uint8_t status = WL_IDLE_STATUS;
-	uint8_t attempts = WL_MAX_ATTEMPT_CONNECTION;
+	uint8_t attempts = retryCount;
 
    if (WiFiDrv::wifiSetApNetwork(ssid, strlen(ssid), channel) != WL_FAILURE)
    {
 	   do
 	   {
-		   delay(WL_DELAY_START_CONNECTION);
+		   if(callbackAccessPointStatus)
+		   {
+			   callbackAccessPointStatus();
+		   }
+		   delay(retryDelay);
 		   status = WiFiDrv::getConnectionStatus();
 	   }
 	   while ((( status == WL_IDLE_STATUS)||(status == WL_SCAN_COMPLETED))&&(--attempts>0));
@@ -153,14 +209,18 @@ uint8_t WiFiClass::beginAP(const char *ssid, const char* passphrase)
 uint8_t WiFiClass::beginAP(const char *ssid, const char* passphrase, uint8_t channel)
 {
 	uint8_t status = WL_IDLE_STATUS;
-	uint8_t attempts = WL_MAX_ATTEMPT_CONNECTION;
+	uint8_t attempts = retryCount;
 
     // set passphrase
     if (WiFiDrv::wifiSetApPassphrase(ssid, strlen(ssid), passphrase, strlen(passphrase), channel)!= WL_FAILURE)
     {
  	   do
  	   {
- 		   delay(WL_DELAY_START_CONNECTION);
+		   if(callbackAccessPointStatus)
+		   {
+			   callbackAccessPointStatus();
+		   }
+ 		   delay(retryDelay);
  		   status = WiFiDrv::getConnectionStatus();
  	   }
 	   while ((( status == WL_IDLE_STATUS)||(status == WL_SCAN_COMPLETED))&&(--attempts>0));
@@ -271,13 +331,17 @@ uint8_t WiFiClass::encryptionType()
 
 int8_t WiFiClass::scanNetworks()
 {
-	uint8_t attempts = 10;
+	uint8_t attempts = retryCount;
 	uint8_t numOfNetworks = 0;
 
 	if (WiFiDrv::startScanNetworks() == WL_FAILURE)
 		return WL_FAILURE;
  	do
  	{
+		   if(callbackScanStatus)
+		   {
+			   callbackScanStatus();
+		   }
  		delay(2000);
  		numOfNetworks = WiFiDrv::getScanNetworks();
  	}
